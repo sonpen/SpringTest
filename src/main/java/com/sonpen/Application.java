@@ -9,6 +9,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.support.GenericXmlApplicationContext;
 
 import java.sql.SQLException;
 
@@ -22,14 +23,10 @@ public class Application {
 
         //SpringApplication.run(Application.class, args);
 
-//        ApplicationContext context = new AnnotationConfigApplicationContext(DaoFactory.class);
-//        UserDao dao = context.getBean("userDao", UserDao.class);
-        AnnotationConfigApplicationContext context =
-                new AnnotationConfigApplicationContext(CountingDaoFactory.class);
+        //ApplicationContext context = new AnnotationConfigApplicationContext(DaoFactory.class);
+        //AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(CountingDaoFactory.class);
+        ApplicationContext context = new GenericXmlApplicationContext("applicationContext.xml");
         UserDao dao = context.getBean("userDao", UserDao.class);
-
-        CountingConnectionMaker ccm = context.getBean("connectionMaker", CountingConnectionMaker.class);
-        System.out.println("Before Connection Counter: " + ccm.getCounter());
 
         User user = new User();
         user.setId("sonpen");
@@ -46,7 +43,5 @@ public class Application {
         System.out.println(user2.getId() + "조회 성공");
 
         dao.delete("sonpen");
-
-        System.out.println("After Connection Counter: " + ccm.getCounter());
     }
 }

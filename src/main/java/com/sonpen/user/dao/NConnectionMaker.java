@@ -11,6 +11,7 @@ public class NConnectionMaker implements ConnectionMaker{
 
     @Override
     public Connection makeConnection() throws ClassNotFoundException, SQLException {
+        System.out.println("NConnectionMaker::makeConnection()");
         Class.forName("org.h2.Driver");
         return DriverManager.getConnection(
                 "jdbc:h2:~/test", "sa", "");

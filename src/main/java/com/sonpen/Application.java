@@ -15,12 +15,12 @@ import java.sql.SQLException;
 /**
  * Created by sonikju on 2018-09-09.
  */
-@SpringBootApplication
+//@SpringBootApplication
 public class Application {
 
     public static void main(String[] args) throws SQLException, ClassNotFoundException {
 
-        SpringApplication.run(Application.class, args);
+        //SpringApplication.run(Application.class, args);
 
 //        ApplicationContext context = new AnnotationConfigApplicationContext(DaoFactory.class);
 //        UserDao dao = context.getBean("userDao", UserDao.class);

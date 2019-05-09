@@ -1,5 +1,6 @@
 package com.sonpen.user.dao;
 
+import jdk.nashorn.internal.scripts.JD;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
@@ -13,9 +14,15 @@ import javax.sql.DataSource;
 public class DaoFactory {
 
     @Bean
+    public JdbcContext jdbcContext() {
+        JdbcContext jdbcContext = new JdbcContext();
+        jdbcContext.setDataSource(dataSource());
+        return jdbcContext;
+    }
+    @Bean
     public UserDao userDao() {
         UserDao userDao = new UserDao();
-        userDao.setDataSource(dataSource());
+        userDao.setJdbcContext(jdbcContext());
         return userDao;
     }
 
@@ -25,7 +32,7 @@ public class DaoFactory {
         dataSource.setDriverClass(org.h2.Driver.class);
         dataSource.setUrl("jdbc:h2:~/test");
         dataSource.setUsername("sa");
-        dataSource.setPassword("");
+        dataSource.setPassword("sa");
 
         return dataSource;
     }

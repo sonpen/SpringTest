@@ -1,15 +1,12 @@
 package com.sonpen;
 
-import com.sonpen.user.dao.CountingConnectionMaker;
-import com.sonpen.user.dao.CountingDaoFactory;
 import com.sonpen.user.dao.DaoFactory;
-import com.sonpen.user.dao.UserDao;
+import com.sonpen.user.dao.UserDaoJdbc;
 import com.sonpen.user.domain.User;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.context.support.GenericXmlApplicationContext;
 
 import java.sql.SQLException;
 
@@ -26,7 +23,7 @@ public class Application {
         ApplicationContext context = new AnnotationConfigApplicationContext(DaoFactory.class);
         //AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(CountingDaoFactory.class);
         //ApplicationContext context = new GenericXmlApplicationContext("applicationContext.xml");
-        UserDao dao = context.getBean("userDao", UserDao.class);
+        UserDaoJdbc dao = context.getBean("userDao", UserDaoJdbc.class);
 
         User user = new User();
         user.setId("sonpen");
@@ -43,5 +40,6 @@ public class Application {
         System.out.println(user2.getId() + "조회 성공");
 
         dao.delete("sonpen");
+
     }
 }

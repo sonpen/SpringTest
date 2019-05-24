@@ -10,8 +10,8 @@ import org.springframework.context.annotation.Configuration;
 public class CountingDaoFactory {
 
 //    @Bean
-//    public  UserDao userDao() {
-//        UserDao userDao = new UserDao();
+//    public  UserDaoJdbc userDao() {
+//        UserDaoJdbc userDao = new UserDaoJdbc();
 //        userDao.setConnectionMaker(connectionMaker());
 //        return userDao;
 //    }

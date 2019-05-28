@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
+import javax.sql.DataSource;
 import java.util.Arrays;
 import java.util.List;
 
@@ -25,6 +26,9 @@ import static com.sonpen.user.service.UserService.MIN_RECOMMEND_FOR_GOLD;
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "/test-applicationContext.xml")
 public class UserServiceTest {
+    @Autowired
+    DataSource dataSource;
+
     @Autowired
     UserDao userDao;
     @Autowired
@@ -44,7 +48,7 @@ public class UserServiceTest {
     }
 
     @Test
-    public void upgradeLevel() {
+    public void upgradeLevel() throws Exception {
         userDao.deleteAll();
         for(User user : users) { userDao.add(user); }
 
@@ -89,4 +93,36 @@ public class UserServiceTest {
         assertThat(userWithoutLevelRead.getLevel(), is(Level.BASIC));
     }
 
+    static class TestUserServiceException extends RuntimeException {
+
+    }
+    static class TestUserService extends UserService {
+        private String id;
+
+        private TestUserService(String id) {
+            this.id = id;
+        }
+        public void upgradeLevel(User user) {
+            if (user.getId().equals(this.id)) throw new TestUserServiceException();
+            super.upgradeLevel(user);
+        }
+    }
+
+    @Test
+    public void upgradeAllOrNothing() throws Exception {
+        TestUserService testUserService = new TestUserService(users.get(3).getId());
+        testUserService.setUserDao(this.userDao);
+        testUserService.setDataSource(this.dataSource);
+
+        userDao.deleteAll();
+        for(User user : users) userDao.add(user);
+        try {
+            testUserService.upgradeLevels();            // 업그레이드 작업 중에 예외가 발생해야한다. 정상종료라면 문제가 있으니 실패
+            fail("TestUserServiceException expected");
+        }
+        catch(TestUserServiceException e) {     // 예외를 잡아서 계속 진행하도록한다. 다른 예외가 발생하면 테스트 실패
+
+        }
+        checkLevelUpgraded(users.get(1), false);    // 예외가 발생하기 전에 레벨 변경이 있었던 사용자의 레빌이 처음 상태로 바뀌었나 확인
+    }
 }

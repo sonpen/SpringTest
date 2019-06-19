@@ -50,9 +50,9 @@ public class UserDaoTest {
         //ApplicationContext context = new GenericXmlApplicationContext("applicationContext.xml");
         dao2 = context.getBean("userDao", UserDaoJdbc.class);
 
-        user1 = new User("id1", "이름1", "pwd1", Level.BASIC, 1, 0);
-        user2 = new User("id2", "이름2", "pwd2", Level.SILVER, 55, 10);
-        user3 = new User("id3", "이름3", "pwd3", Level.GOLD, 100, 40);
+        user1 = new User("id1", "이름1", "pwd1", Level.BASIC, 1, 0, "ikju.son@sk.com");
+        user2 = new User("id2", "이름2", "pwd2", Level.SILVER, 55, 10, "sonpen76@naver.com");
+        user3 = new User("id3", "이름3", "pwd3", Level.GOLD, 100, 40,"sonpen76@gmail.com");
 
         // 테스트를 위한 수동 DI 적용
         //DataSource dataSource = new SingleConnectionDataSource("jdbc:h2:~/test", "sa", "sa", true);
@@ -146,6 +146,7 @@ public class UserDaoTest {
         assertThat(user1.getLevel(), is(user2.getLevel()));
         assertThat(user1.getLogin(), is(user2.getLogin()));
         assertThat(user1.getRecommend(), is(user2.getRecommend()));
+        assertThat(user1.getEmail(), is(user2.getEmail()));
     }
 
     @Test

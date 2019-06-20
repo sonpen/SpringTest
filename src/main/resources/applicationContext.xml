@@ -21,9 +21,12 @@
     <bean id ="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
         <property name="host" value="mail.server.com" />
     </bean>
-    <bean id ="userService" class="com.sonpen.user.service.UserService">
-        <property name="userDao" ref="userDao" />
+    <bean id ="userService" class="com.sonpen.user.service.UserServiceTx">
         <property name="transactionManager" ref="transactionManager" />
+        <property name="userService" ref="userServiceImpl" />
+    </bean>
+    <bean id ="userServiceImpl" class="com.sonpen.user.service.UserServiceImpl">
+        <property name="userDao" ref="userDao" />
         <property name="mailSender" ref="mailSender" />
     </bean>
 </beans>

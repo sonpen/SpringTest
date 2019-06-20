@@ -23,8 +23,8 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.*;
 
-import static com.sonpen.user.service.UserService.MIN_LOGCOUNT_FOR_SILVER;
-import static com.sonpen.user.service.UserService.MIN_RECOMMEND_FOR_GOLD;
+import static com.sonpen.user.service.UserServiceImpl.MIN_LOGCOUNT_FOR_SILVER;
+import static com.sonpen.user.service.UserServiceImpl.MIN_RECOMMEND_FOR_GOLD;
 /**
  * Created by 1109806 on 2019-05-24.
  */
@@ -38,6 +38,8 @@ public class UserServiceTest {
     UserDao userDao;
     @Autowired
     UserService userService;
+    @Autowired
+    UserServiceImpl userServiceImpl;
     @Autowired
     PlatformTransactionManager transactionManager;
 
@@ -64,7 +66,7 @@ public class UserServiceTest {
 
         // 메일 발송 결과를 테스트할 수 있도록 목 오브젝트를 만들어 userService 의 의존 오브젝트로 주입해준다.
         MockMailSender mockMailSender = new MockMailSender();
-        userService.setMailSender(mockMailSender);
+        userServiceImpl.setMailSender(mockMailSender);
 
         userService.upgradeLevels();
 
@@ -115,7 +117,7 @@ public class UserServiceTest {
     static class TestUserServiceException extends RuntimeException {
 
     }
-    static class TestUserService extends UserService {
+    static class TestUserService extends UserServiceImpl {
         private String id;
 
         private TestUserService(String id) {
@@ -131,13 +133,16 @@ public class UserServiceTest {
     public void upgradeAllOrNothing() throws Exception {
         TestUserService testUserService = new TestUserService(users.get(3).getId());
         testUserService.setUserDao(this.userDao);
-        testUserService.setTransactionManager(this.transactionManager);
         testUserService.setMailSender(mailSender);
+
+        UserServiceTx txUserService = new UserServiceTx();
+        txUserService.setTransactionManager(this.transactionManager);
+        txUserService.setUserService(testUserService);
 
         userDao.deleteAll();
         for(User user : users) userDao.add(user);
         try {
-            testUserService.upgradeLevels();            // 업그레이드 작업 중에 예외가 발생해야한다. 정상종료라면 문제가 있으니 실패
+            txUserService.upgradeLevels();            // 업그레이드 작업 중에 예외가 발생해야한다. 정상종료라면 문제가 있으니 실패
             fail("TestUserServiceException expected");
         }
         catch(TestUserServiceException e) {     // 예외를 잡아서 계속 진행하도록한다. 다른 예외가 발생하면 테스트 실패

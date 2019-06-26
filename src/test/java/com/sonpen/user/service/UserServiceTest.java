@@ -52,29 +52,77 @@ public class UserServiceTest {
     public void setUp() {
         users = Arrays.asList(
                 new User("bumjin", "박범진", "p1", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER-1, 0, "sonpen76@gmail.com"),
-                new User("joytoutch", "강명성", "p2", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER, 0, "sonpen76@gmail.com"),
+                new User("joytouch", "강명성", "p2", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER, 0, "sonpen76@gmail.com"),
                 new User("erwins", "신승한", "p3", Level.SILVER, 60, MIN_RECOMMEND_FOR_GOLD-1, "sonpen76@gmail.com"),
                 new User("madnite1", "이상호", "p4", Level.SILVER, 60, MIN_RECOMMEND_FOR_GOLD, "sonpen76@gmail.com"),
                 new User("green", "오민규", "p5", Level.GOLD, 100, Integer.MAX_VALUE, "sonpen76@gmail.com")
         );
     }
 
+    static public class MockUserDao implements UserDao {
+        private List<User> users;    // 레벨 업그레이드 후보 User 오브젝트 목록
+        private List<User> updated = new ArrayList();       // 업그레이드 대상 오브젝트를 저장해둘 목록
+
+        private MockUserDao(List<User> users) {
+            this.users = users;
+        }
+        public List<User> getUpdated() {
+            return this.updated;
+        }
+
+        @Override
+        public void deleteAll() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void delete(String id) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void add(User user) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public User get(String id) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public int getCount() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<User> getAll() {
+            return this.users;
+        }
+
+        @Override
+        public void update(User user) {
+            updated.add(user);
+        }
+    }
+
     @Test
     public void upgradeLevels() throws Exception {
-        userDao.deleteAll();
-        for(User user : users) { userDao.add(user); }
+        UserServiceImpl userServiceImpl = new UserServiceImpl();
 
-        // 메일 발송 결과를 테스트할 수 있도록 목 오브젝트를 만들어 userService 의 의존 오브젝트로 주입해준다.
+        MockUserDao mockUserDao = new MockUserDao(this.users);
+        userServiceImpl.setUserDao(mockUserDao);
+
         MockMailSender mockMailSender = new MockMailSender();
         userServiceImpl.setMailSender(mockMailSender);
 
-        userService.upgradeLevels();
+        userServiceImpl.upgradeLevels();
 
-        checkLevelUpgraded(users.get(0), false);
-        checkLevelUpgraded(users.get(1), true);
-        checkLevelUpgraded(users.get(2), false);
-        checkLevelUpgraded(users.get(3), true);
-        checkLevelUpgraded(users.get(4), false);
+        List<User> updated = mockUserDao.getUpdated();
+
+        assertThat(updated.size(), is(2));
+        checkUserAndLevel(updated.get(0), "joytouch", Level.SILVER);
+        checkUserAndLevel(updated.get(1), "madnite1", Level.GOLD);
 
         List<String> request = mockMailSender.getRequests();
         assertThat(request.size(), is(2));
@@ -82,10 +130,11 @@ public class UserServiceTest {
         assertThat(request.get(1), is(users.get(3).getEmail()));
     }
 
-    private void checkLevel(User user, Level expectedLevel) {
-        User userUpdate = userDao.get(user.getId());
-        assertThat(userUpdate.getLevel(), is(expectedLevel));
+    private void checkUserAndLevel(User updated, String expectedId, Level expectedLevel) {
+        assertThat(updated.getId(), is(expectedId));
+        assertThat(updated.getLevel(), is(expectedLevel));
     }
+
     private void checkLevelUpgraded(User user, boolean upgraded) {
         User userUpdate = userDao.get(user.getId());
         if( upgraded) {

@@ -6,6 +6,7 @@ import com.sonpen.user.domain.User;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSender;
@@ -13,18 +14,22 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
+import sun.java2d.pipe.SpanShapeRenderer;
 
 import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.*;
-
 import static com.sonpen.user.service.UserServiceImpl.MIN_LOGCOUNT_FOR_SILVER;
 import static com.sonpen.user.service.UserServiceImpl.MIN_RECOMMEND_FOR_GOLD;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
+
 /**
  * Created by 1109806 on 2019-05-24.
  */
@@ -59,75 +64,30 @@ public class UserServiceTest {
         );
     }
 
-    static public class MockUserDao implements UserDao {
-        private List<User> users;    // 레벨 업그레이드 후보 User 오브젝트 목록
-        private List<User> updated = new ArrayList();       // 업그레이드 대상 오브젝트를 저장해둘 목록
-
-        private MockUserDao(List<User> users) {
-            this.users = users;
-        }
-        public List<User> getUpdated() {
-            return this.updated;
-        }
-
-        @Override
-        public void deleteAll() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void delete(String id) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void add(User user) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public User get(String id) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public int getCount() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public List<User> getAll() {
-            return this.users;
-        }
-
-        @Override
-        public void update(User user) {
-            updated.add(user);
-        }
-    }
-
     @Test
     public void upgradeLevels() throws Exception {
         UserServiceImpl userServiceImpl = new UserServiceImpl();
 
-        MockUserDao mockUserDao = new MockUserDao(this.users);
-        userServiceImpl.setUserDao(mockUserDao);
+        UserDao mockUserDao = mock(UserDao.class);              // 목 오브젝트를 생성하고
+        when(mockUserDao.getAll()).thenReturn(this.users);      // getAll() 이 호출되었을때 리턴값을 설정해 준 뒤
+        userServiceImpl.setUserDao(mockUserDao);                // 테스트 대상에 DI
 
-        MockMailSender mockMailSender = new MockMailSender();
+        MailSender mockMailSender = mock(MailSender.class);
         userServiceImpl.setMailSender(mockMailSender);
 
         userServiceImpl.upgradeLevels();
 
-        List<User> updated = mockUserDao.getUpdated();
+        verify(mockUserDao, times(2)).update(any(User.class));      // update() 가 2번 호출 되었는지?
+        verify(mockUserDao).update(users.get(1));                   // users.get(1) 로 업데이트가 호출되었는지?
+        assertThat(users.get(1).getLevel(), is(Level.SILVER));      // 레벨 변화는 직접 확인이 안되므로...
+        verify(mockUserDao).update(users.get(3));
+        assertThat(users.get(3).getLevel(), is(Level.GOLD));
 
-        assertThat(updated.size(), is(2));
-        checkUserAndLevel(updated.get(0), "joytouch", Level.SILVER);
-        checkUserAndLevel(updated.get(1), "madnite1", Level.GOLD);
-
-        List<String> request = mockMailSender.getRequests();
-        assertThat(request.size(), is(2));
-        assertThat(request.get(0), is(users.get(1).getEmail()));
-        assertThat(request.get(1), is(users.get(3).getEmail()));
+        ArgumentCaptor<SimpleMailMessage> mailMessageArg = ArgumentCaptor.forClass(SimpleMailMessage.class);        // MailSender 목 오브젝트에 전달된 파라미터를 가져와서 내용을 검증
+        verify(mockMailSender, times(2)).send(mailMessageArg.capture());
+        List<SimpleMailMessage> mailMessages = mailMessageArg.getAllValues();
+        assertThat(mailMessages.get(0).getTo()[0], is(users.get(1).getEmail()));
+        assertThat(mailMessages.get(1).getTo()[0], is(users.get(3).getEmail()));
     }
 
     private void checkUserAndLevel(User updated, String expectedId, Level expectedLevel) {

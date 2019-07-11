@@ -17,6 +17,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import sun.java2d.pipe.SpanShapeRenderer;
 
 import javax.sql.DataSource;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -147,6 +148,30 @@ public class UserServiceTest {
         UserServiceTx txUserService = new UserServiceTx();
         txUserService.setTransactionManager(this.transactionManager);
         txUserService.setUserService(testUserService);
+
+        userDao.deleteAll();
+        for(User user : users) userDao.add(user);
+        try {
+            txUserService.upgradeLevels();            // 업그레이드 작업 중에 예외가 발생해야한다. 정상종료라면 문제가 있으니 실패
+            fail("TestUserServiceException expected");
+        }
+        catch(TestUserServiceException e) {     // 예외를 잡아서 계속 진행하도록한다. 다른 예외가 발생하면 테스트 실패
+
+        }
+        checkLevelUpgraded(users.get(1), false);    // 예외가 발생하기 전에 레벨 변경이 있었던 사용자의 레빌이 처음 상태로 바뀌었나 확인
+    }
+    @Test
+    public void upgradeAllOrNothingWithDynamicProxy() throws Exception {
+        TestUserService testUserService = new TestUserService(users.get(3).getId());
+        testUserService.setUserDao(this.userDao);
+        testUserService.setMailSender(mailSender);
+
+        TransactionHandler txHandler = new TransactionHandler();
+        txHandler.setTarget(testUserService);
+        txHandler.setTransactionManager(this.transactionManager);
+        txHandler.setPattern("upgradeLevels");
+
+        UserService txUserService = (UserService)Proxy.newProxyInstance(getClass().getClassLoader(), new Class[]{UserService.class}, txHandler);
 
         userDao.deleteAll();
         for(User user : users) userDao.add(user);

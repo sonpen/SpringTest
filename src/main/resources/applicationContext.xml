@@ -21,9 +21,11 @@
     <bean id ="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
         <property name="host" value="mail.server.com" />
     </bean>
-    <bean id ="userService" class="com.sonpen.user.service.UserServiceTx">
+    <bean id ="userService" class="com.sonpen.user.service.TxProxyFactoryBean">
         <property name="transactionManager" ref="transactionManager" />
-        <property name="userService" ref="userServiceImpl" />
+        <property name="target" ref="userServiceImpl" />
+        <property name="pattern" value="upgradeLevels" />
+        <property name="serviceInterface" value="com.sonpen.user.service.UserService" />
     </bean>
     <bean id ="userServiceImpl" class="com.sonpen.user.service.UserServiceImpl">
         <property name="userDao" ref="userDao" />

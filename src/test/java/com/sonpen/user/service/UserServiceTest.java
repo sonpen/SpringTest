@@ -7,6 +7,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.mail.MailException;
@@ -145,15 +146,15 @@ public class UserServiceTest {
     }
 
     @Test
-    @DirtiesContext         // 다이내믹 프록시 팩토리 빈을 직접 만들어 사용할 때는 없앴다가 다시 등장한 컨택스트 무효화 애노테이션
+    @DirtiesContext         // 컨텍스트 설정을 변경하기 때문에 여전히 필요하다.
     public void upgradeAllOrNothing() throws Exception {
         TestUserService testUserService = new TestUserService(users.get(3).getId());
         testUserService.setUserDao(this.userDao);
         testUserService.setMailSender(mailSender);
 
-        TxProxyFactoryBean txProxyFactoryBean = context.getBean("&userService", TxProxyFactoryBean.class);      // 팩토리 빈 자체를 가져와야 하므로 빈 이름에 &를 반드시 넣어야 한다.
+        ProxyFactoryBean txProxyFactoryBean = context.getBean("&userService", ProxyFactoryBean.class);      // 팩토리 빈 자체를 가져와야 하므로 빈 이름에 &를 반드시 넣어야 한다.
         txProxyFactoryBean.setTarget(testUserService);
-        UserService txUserService = (UserService)txProxyFactoryBean.getObject();    // 변경된 타깃 설정을 이용해서 트랜잭션 다이내믹 프록시 오브젝트를 다시 생성한다.
+        UserService txUserService = (UserService)txProxyFactoryBean.getObject();    // FactoryBean 타입이므로 동일하게 getObject() 로 프록시를 가져온다.
 
         userDao.deleteAll();
         for(User user : users) userDao.add(user);

@@ -48,7 +48,7 @@ public class UserServiceTest {
     @Autowired
     UserService userService;
     @Autowired
-    UserServiceImpl userServiceImpl;
+    UserService testUserService;        // 같은 타입의 빈이 두 개 존재하기 때문에 필드 이르을 기준으로 주입될 빈이 결정된다. 자동 프록시 생성기에 의해 트랜잭션 부가기능이 testUserService 빈에 적용됐는지를 확인하는 것이 목적이다.
     @Autowired
     PlatformTransactionManager transactionManager;
 
@@ -133,12 +133,9 @@ public class UserServiceTest {
     static class TestUserServiceException extends RuntimeException {
 
     }
-    static class TestUserService extends UserServiceImpl {
-        private String id;
+    static class TestUserServiceImpl extends UserServiceImpl {      // 포인트컷의 클래스 필터에 선정되도록 이름 변경. 이래서 처음부터 이름을 잘 지어야 한다.
+        private String id = "madnite1";     // 테스트 픽스처의 users(3) 의 id값을 고정시켜버렸다.
 
-        private TestUserService(String id) {
-            this.id = id;
-        }
         public void upgradeLevel(User user) {
             if (user.getId().equals(this.id)) throw new TestUserServiceException();
             super.upgradeLevel(user);
@@ -148,18 +145,11 @@ public class UserServiceTest {
     @Test
     @DirtiesContext         // 컨텍스트 설정을 변경하기 때문에 여전히 필요하다.
     public void upgradeAllOrNothing() throws Exception {
-        TestUserService testUserService = new TestUserService(users.get(3).getId());
-        testUserService.setUserDao(this.userDao);
-        testUserService.setMailSender(mailSender);
-
-        ProxyFactoryBean txProxyFactoryBean = context.getBean("&userService", ProxyFactoryBean.class);      // 팩토리 빈 자체를 가져와야 하므로 빈 이름에 &를 반드시 넣어야 한다.
-        txProxyFactoryBean.setTarget(testUserService);
-        UserService txUserService = (UserService)txProxyFactoryBean.getObject();    // FactoryBean 타입이므로 동일하게 getObject() 로 프록시를 가져온다.
 
         userDao.deleteAll();
         for(User user : users) userDao.add(user);
         try {
-            txUserService.upgradeLevels();            // 업그레이드 작업 중에 예외가 발생해야한다. 정상종료라면 문제가 있으니 실패
+            this.testUserService.upgradeLevels();            // 업그레이드 작업 중에 예외가 발생해야한다. 정상종료라면 문제가 있으니 실패
             fail("TestUserServiceException expected");
         }
         catch(TestUserServiceException e) {     // 예외를 잡아서 계속 진행하도록한다. 다른 예외가 발생하면 테스트 실패
@@ -167,31 +157,6 @@ public class UserServiceTest {
         }
         checkLevelUpgraded(users.get(1), false);    // 예외가 발생하기 전에 레벨 변경이 있었던 사용자의 레빌이 처음 상태로 바뀌었나 확인
     }
-    @Test
-    public void upgradeAllOrNothingWithDynamicProxy() throws Exception {
-        TestUserService testUserService = new TestUserService(users.get(3).getId());
-        testUserService.setUserDao(this.userDao);
-        testUserService.setMailSender(mailSender);
-
-        TransactionHandler txHandler = new TransactionHandler();
-        txHandler.setTarget(testUserService);
-        txHandler.setTransactionManager(this.transactionManager);
-        txHandler.setPattern("upgradeLevels");
-
-        UserService txUserService = (UserService)Proxy.newProxyInstance(getClass().getClassLoader(), new Class[]{UserService.class}, txHandler);
-
-        userDao.deleteAll();
-        for(User user : users) userDao.add(user);
-        try {
-            txUserService.upgradeLevels();            // 업그레이드 작업 중에 예외가 발생해야한다. 정상종료라면 문제가 있으니 실패
-            fail("TestUserServiceException expected");
-        }
-        catch(TestUserServiceException e) {     // 예외를 잡아서 계속 진행하도록한다. 다른 예외가 발생하면 테스트 실패
-
-        }
-        checkLevelUpgraded(users.get(1), false);    // 예외가 발생하기 전에 레벨 변경이 있었던 사용자의 레빌이 처음 상태로 바뀌었나 확인
-    }
-
 
     // 목 오브젝트로 만든 메일 전송 확인용 클래스
     static class MockMailSender implements MailSender {
@@ -211,4 +176,5 @@ public class UserServiceTest {
 
         }
     }
+
 }
